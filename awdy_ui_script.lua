@@ -1820,6 +1820,130 @@ function AWDY:Notify(title, message, duration)
     end)
 end
 
+-- ====================================================================
+-- ACRYLIC LOCALIZED BLUR ENGINE (7kayoh / Fluent Method)
+-- Blurs ONLY the exact bounded area underneath the UI frame!
+-- ====================================================================
+local AcrylicBlur = {}
+AcrylicBlur.__index = AcrylicBlur
+
+function AcrylicBlur.new(targetFrame)
+    local self = setmetatable({}, AcrylicBlur)
+    local Camera = workspace.CurrentCamera
+    local Lighting = game:GetService("Lighting")
+
+    -- 1. DepthOfFieldEffect in Lighting
+    local dof = Lighting:FindFirstChild("AWDY_AcrylicDOF")
+    if not dof then
+        dof = Instance.new("DepthOfFieldEffect")
+        dof.Name = "AWDY_AcrylicDOF"
+        dof.FarIntensity = 0
+        dof.InFocusRadius = 0.1
+        dof.NearIntensity = 1
+        dof.Enabled = true
+        dof.Parent = Lighting
+    end
+    self.DOF = dof
+
+    -- 2. Glass Part projected in front of Camera
+    local part = Instance.new("Part")
+    part.Name = "AWDY_AcrylicGlassPart"
+    part.Color = Color3.new(0, 0, 0)
+    part.Material = Enum.Material.Glass
+    part.Size = Vector3.new(1, 1, 0)
+    part.Anchored = true
+    part.CanCollide = false
+    part.Locked = true
+    part.CastShadow = false
+    part.Transparency = 0.98
+    part.Parent = Camera or workspace
+
+    local mesh = Instance.new("SpecialMesh")
+    mesh.MeshType = Enum.MeshType.Brick
+    mesh.Offset = Vector3.new(0, 0, -0.000001)
+    mesh.Parent = part
+
+    self.Part = part
+    self.Mesh = mesh
+    self.Cleanups = {}
+    self.Enabled = true
+
+    local distance = 0.001
+
+    local function viewportPointToWorld(point)
+        local cam = workspace.CurrentCamera
+        if not cam then return Vector3.zero end
+        local unitRay = cam:ScreenPointToRay(point.X, point.Y)
+        return unitRay.Origin + unitRay.Direction * distance
+    end
+
+    local function render()
+        local cam = workspace.CurrentCamera
+        if not cam or not targetFrame or not self.Part or not self.Part.Parent then return end
+        
+        local camCF = cam.CFrame
+        local absPos = targetFrame.AbsolutePosition
+        local absSize = targetFrame.AbsoluteSize
+
+        local pTL = viewportPointToWorld(absPos)
+        local pTR = viewportPointToWorld(absPos + Vector2.new(absSize.X, 0))
+        local pBR = viewportPointToWorld(absPos + absSize)
+
+        local width = (pTR - pTL).Magnitude
+        local height = (pTR - pBR).Magnitude
+
+        self.Part.CFrame = CFrame.fromMatrix((pTL + pBR) / 2, camCF.XVector, camCF.YVector, camCF.ZVector)
+        self.Mesh.Scale = Vector3.new(width, height, 0)
+    end
+
+    local function bindCamera(cam)
+        if not cam then return end
+        self.Part.Parent = cam
+        table.insert(self.Cleanups, cam:GetPropertyChangedSignal("CFrame"):Connect(render))
+        table.insert(self.Cleanups, cam:GetPropertyChangedSignal("ViewportSize"):Connect(render))
+        table.insert(self.Cleanups, cam:GetPropertyChangedSignal("FieldOfView"):Connect(render))
+    end
+
+    bindCamera(Camera)
+    table.insert(self.Cleanups, workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
+        bindCamera(workspace.CurrentCamera)
+        render()
+    end))
+
+    table.insert(self.Cleanups, targetFrame:GetPropertyChangedSignal("AbsolutePosition"):Connect(render))
+    table.insert(self.Cleanups, targetFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(render))
+
+    task.spawn(render)
+
+    return self
+end
+
+function AcrylicBlur:SetEnabled(state)
+    self.Enabled = state
+    if self.Part then
+        self.Part.Transparency = state and 0.98 or 1
+    end
+    if self.DOF then
+        self.DOF.Enabled = state
+    end
+end
+
+function AcrylicBlur:Destroy()
+    for _, conn in ipairs(self.Cleanups) do
+        pcall(function() conn:Disconnect() end)
+    end
+    self.Cleanups = {}
+    if self.Part then
+        pcall(function() self.Part:Destroy() end)
+        self.Part = nil
+    end
+    if self.DOF then
+        pcall(function() self.DOF:Destroy() end)
+        self.DOF = nil
+    end
+end
+
+
 -- Create Window Function
 function AWDY:CreateWindow(config)
     config = config or {}
@@ -1827,7 +1951,6 @@ function AWDY:CreateWindow(config)
     local windowVer = config.Version or self.Version
     local defaultBanner = config.Banner or "rbxassetid://12501062078"
     local defaultBg = config.BackgroundImage or nil
-    local blurSize = config.BlurSize or 24
 
     -- ScreenGui Setup
     local screenGui = Instance.new("ScreenGui")
@@ -1835,16 +1958,6 @@ function AWDY:CreateWindow(config)
     screenGui.ResetOnSpawn = false
     screenGui.Parent = ParentGui
     self.ScreenGui = screenGui
-
-    -- Background Blur Effect in Lighting (Active when no background image is set)
-    local blurEffect = Lighting:FindFirstChild("AWDY_BlurEffect")
-    if not blurEffect then
-        blurEffect = Instance.new("BlurEffect")
-        blurEffect.Name = "AWDY_BlurEffect"
-        blurEffect.Size = blurSize
-        blurEffect.Enabled = false
-        blurEffect.Parent = Lighting
-    end
 
     -- Main Container (Translucent Glass Frame)
     local mainFrame = Instance.new("Frame")
@@ -1859,6 +1972,9 @@ function AWDY:CreateWindow(config)
     local mainCorner = Instance.new("UICorner")
     mainCorner.CornerRadius = UDim.new(0, 16)
     mainCorner.Parent = mainFrame
+
+    -- Acrylic Localized Blur (Blurs ONLY under mainFrame!)
+    local acrylicBlur = AcrylicBlur.new(mainFrame)
 
     -- Custom Window Background Image (Optional Wallpaper)
     local windowBgImg = Instance.new("ImageLabel")
@@ -1896,25 +2012,25 @@ function AWDY:CreateWindow(config)
             windowBgImg.Image = AWDY:GetIconId(img) or img
             windowBgImg.ImageTransparency = transparency or 0.15
             windowBgImg.Visible = true
-            -- When custom image is set: turn off background blur
-            blurEffect.Enabled = false
-            mainFrame.BackgroundTransparency = 0.2
+            -- When custom image is set: turn off localized blur
+            acrylicBlur:SetEnabled(false)
+            mainFrame.BackgroundTransparency = 0.25
         else
             hasBgImage = false
             windowBgImg.Image = ""
             windowBgImg.Visible = false
-            -- When NO image is set: blur whatever is underneath the UI!
-            blurEffect.Enabled = mainFrame.Visible and (not isMinimized)
+            -- When NO image is set: blur ONLY whatever is under mainFrame!
+            acrylicBlur:SetEnabled(mainFrame.Visible and (not isMinimized))
             mainFrame.BackgroundTransparency = AWDY.ActiveTheme.MainTransparency
         end
     end
 
     UpdateBackgroundMode(defaultBg, config.BackgroundTransparency)
 
-    -- Auto manage blur on visibility change
+    -- Auto manage localized blur on visibility change
     mainFrame:GetPropertyChangedSignal("Visible"):Connect(function()
-        if blurEffect then
-            blurEffect.Enabled = mainFrame.Visible and (not hasBgImage) and (not isMinimized)
+        if acrylicBlur then
+            acrylicBlur:SetEnabled(mainFrame.Visible and (not hasBgImage) and (not isMinimized))
         end
     end)
 
@@ -1994,10 +2110,10 @@ function AWDY:CreateWindow(config)
         isMinimized = not isMinimized
         if isMinimized then
             Tween(mainFrame, {0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out}, {Size = UDim2.new(0, 780, 0, 48)})
-            if blurEffect then blurEffect.Enabled = false end
+            if acrylicBlur then acrylicBlur:SetEnabled(false) end
         else
             Tween(mainFrame, {0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out}, {Size = UDim2.new(0, 780, 0, 520)})
-            if blurEffect and (not hasBgImage) then blurEffect.Enabled = true end
+            if acrylicBlur and (not hasBgImage) then acrylicBlur:SetEnabled(true) end
         end
     end)
 
@@ -2008,7 +2124,7 @@ function AWDY:CreateWindow(config)
     local closeBtn = MakeIconButton("x", self.ActiveTheme.RedAccent, 0.1)
     closeBtn.ImageColor3 = Color3.fromRGB(255, 255, 255)
     closeBtn.MouseButton1Click:Connect(function()
-        if blurEffect then blurEffect:Destroy() end
+        if acrylicBlur then acrylicBlur:Destroy() end
         Tween(mainFrame, {0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.In}, {Size = UDim2.new(0, 0, 0, 0), BackgroundTransparency = 1})
         task.wait(0.25)
         screenGui:Destroy()
@@ -2175,19 +2291,16 @@ function AWDY:CreateWindow(config)
         CurrentTab = nil,
         SearchInput = searchInput,
         BackgroundImage = windowBgImg,
-        BlurEffect = blurEffect
+        AcrylicBlur = acrylicBlur
     }
 
     function Window:SetBackgroundImage(image, transparency)
         UpdateBackgroundMode(image, transparency)
     end
 
-    function Window:SetBlur(enabled, size)
-        if size then blurEffect.Size = size end
-        if enabled ~= nil then
-            blurEffect.Enabled = enabled
-        else
-            blurEffect.Enabled = not hasBgImage
+    function Window:SetBlur(enabled)
+        if acrylicBlur then
+            acrylicBlur:SetEnabled(enabled ~= nil and enabled or (not hasBgImage))
         end
     end
 
