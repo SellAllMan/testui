@@ -1,7 +1,7 @@
 --[[
     AWDY HUB UI Library (v0.0.3-Beta)
     Translucent Glassmorphism Roblox UI Script
-    Designed from awdy_ui specs
+    Supports: Lucide Icons, Figma Original Dashboard, Dynamic Stats, Live Search
 --]]
 
 local UserInputService = game:GetService("UserInputService")
@@ -11,6 +11,7 @@ local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
 local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
+local MarketplaceService = game:GetService("MarketplaceService")
 
 local LocalPlayer = Players.LocalPlayer
 
@@ -27,24 +28,63 @@ end
 local AWDY = {
     Version = "0.0.3-Beta",
     ActiveTheme = {
-        MainBackground = Color3.fromRGB(30, 30, 35),
-        MainTransparency = 0.42,
+        MainBackground = Color3.fromRGB(24, 24, 28),
+        MainTransparency = 0.45,
         HeaderBackground = Color3.fromRGB(255, 255, 255),
-        HeaderTransparency = 0.92,
+        HeaderTransparency = 0.93,
         CardBackground = Color3.fromRGB(255, 255, 255),
-        CardTransparency = 0.94,
+        CardTransparency = 0.95,
         ItemBackground = Color3.fromRGB(255, 255, 255),
-        ItemTransparency = 0.93,
+        ItemTransparency = 0.92,
         StrokeColor = Color3.fromRGB(255, 255, 255),
-        StrokeTransparency = 0.82,
+        StrokeTransparency = 0.85,
         TextColor = Color3.fromRGB(255, 255, 255),
-        TextSubColor = Color3.fromRGB(160, 160, 170),
-        RedAccent = Color3.fromRGB(235, 65, 75),
+        TextSubColor = Color3.fromRGB(150, 150, 160),
+        RedAccent = Color3.fromRGB(225, 55, 65),
         GreenAccent = Color3.fromRGB(60, 205, 110),
+    },
+    -- Lucide Icons Asset Map (Official Roblox Asset IDs)
+    Lucide = {
+        ["dashboard"] = "rbxassetid://10723415766",
+        ["layout-dashboard"] = "rbxassetid://10723415766",
+        ["main"] = "rbxassetid://10723346959",
+        ["bar-chart"] = "rbxassetid://10723346959",
+        ["bar-chart-2"] = "rbxassetid://10723346959",
+        ["settings"] = "rbxassetid://10734950309",
+        ["search"] = "rbxassetid://10734898355",
+        ["copy"] = "rbxassetid://10709791437",
+        ["rotate-cw"] = "rbxassetid://10734940380",
+        ["rejoin"] = "rbxassetid://10734940380",
+        ["server"] = "rbxassetid://10734944444",
+        ["server-hop"] = "rbxassetid://10734944444",
+        ["minus"] = "rbxassetid://10734896206",
+        ["maximize-2"] = "rbxassetid://10734895698",
+        ["x"] = "rbxassetid://10747384394",
+        ["chevron-down"] = "rbxassetid://10709790948",
+        ["zap"] = "rbxassetid://10734975692",
+        ["user"] = "rbxassetid://10747373176",
+        ["sliders"] = "rbxassetid://10734951847",
+        ["check"] = "rbxassetid://10709790644",
+        ["bell"] = "rbxassetid://10709790426",
+        ["eye"] = "rbxassetid://10723345749",
+        ["lock"] = "rbxassetid://10723416652",
+        ["shield"] = "rbxassetid://10734949856"
     }
 }
 
--- Utility Functions
+-- Lucide Icon Resolver
+function AWDY:GetIconId(icon)
+    if not icon then return nil end
+    if string.sub(icon, 1, 13) == "rbxassetid://" then
+        return icon
+    end
+    local clean = string.lower(string.gsub(icon, "_", "-"))
+    if self.Lucide[clean] then
+        return self.Lucide[clean]
+    end
+    return nil
+end
+
 local function Tween(object, info, properties)
     local tween = TweenService:Create(object, TweenInfo.new(unpack(info)), properties)
     tween:Play()
@@ -83,14 +123,14 @@ local function MakeDraggable(gui, handle)
     end)
 end
 
--- Toast Notification System (Bonus Feature)
+-- Notification Toast System
 function AWDY:Notify(title, message, duration)
     duration = duration or 3
     if not self.NotificationHolder then
         local holder = Instance.new("Frame")
         holder.Name = "AWDY_Notifications"
-        holder.Size = UDim2.new(0, 260, 1, -40)
-        holder.Position = UDim2.new(1, -280, 0, 20)
+        holder.Size = UDim2.new(0, 270, 1, -40)
+        holder.Position = UDim2.new(1, -290, 0, 20)
         holder.BackgroundTransparency = 1
         holder.Parent = self.ScreenGui
 
@@ -104,7 +144,7 @@ function AWDY:Notify(title, message, duration)
     end
 
     local toast = Instance.new("Frame")
-    toast.Size = UDim2.new(1, 0, 0, 55)
+    toast.Size = UDim2.new(1, 0, 0, 58)
     toast.BackgroundColor3 = AWDY.ActiveTheme.MainBackground
     toast.BackgroundTransparency = 0.25
     toast.Parent = self.NotificationHolder
@@ -115,13 +155,13 @@ function AWDY:Notify(title, message, duration)
 
     local stroke = Instance.new("UIStroke")
     stroke.Color = AWDY.ActiveTheme.StrokeColor
-    stroke.Transparency = 0.7
+    stroke.Transparency = 0.75
     stroke.Thickness = 1
     stroke.Parent = toast
 
     local tLabel = Instance.new("TextLabel")
     tLabel.Size = UDim2.new(1, -20, 0, 20)
-    tLabel.Position = UDim2.new(0, 12, 0, 8)
+    tLabel.Position = UDim2.new(0, 14, 0, 8)
     tLabel.BackgroundTransparency = 1
     tLabel.Font = Enum.Font.GothamBold
     tLabel.Text = title
@@ -132,7 +172,7 @@ function AWDY:Notify(title, message, duration)
 
     local mLabel = Instance.new("TextLabel")
     mLabel.Size = UDim2.new(1, -20, 0, 20)
-    mLabel.Position = UDim2.new(0, 12, 0, 28)
+    mLabel.Position = UDim2.new(0, 14, 0, 28)
     mLabel.BackgroundTransparency = 1
     mLabel.Font = Enum.Font.Gotham
     mLabel.Text = message
@@ -158,7 +198,7 @@ function AWDY:CreateWindow(config)
     config = config or {}
     local windowTitle = config.Title or "AWDY HUB"
     local windowVer = config.Version or self.Version
-    local defaultBanner = config.Banner or "rbxassetid://12501062078" -- Default aesthetic banner ID or customizable
+    local defaultBanner = config.Banner or "rbxassetid://12501062078"
 
     -- ScreenGui Setup
     local screenGui = Instance.new("ScreenGui")
@@ -167,7 +207,7 @@ function AWDY:CreateWindow(config)
     screenGui.Parent = ParentGui
     self.ScreenGui = screenGui
 
-    -- Main Container (Translucent Frame)
+    -- Main Container (Translucent Glass Frame)
     local mainFrame = Instance.new("Frame")
     mainFrame.Name = "MainFrame"
     mainFrame.Size = UDim2.new(0, 780, 0, 520)
@@ -201,7 +241,7 @@ function AWDY:CreateWindow(config)
 
     -- Title & Subtitle
     local titleLabel = Instance.new("TextLabel")
-    titleLabel.Size = UDim2.new(0, 200, 1, 0)
+    titleLabel.Size = UDim2.new(0, 240, 1, 0)
     titleLabel.Position = UDim2.new(0, 20, 0, 0)
     titleLabel.BackgroundTransparency = 1
     titleLabel.Font = Enum.Font.GothamBold
@@ -214,7 +254,7 @@ function AWDY:CreateWindow(config)
 
     MakeDraggable(mainFrame, topBar)
 
-    -- Window Controls (Minimize, Maximize, Close)
+    -- Top Window Controls (Minimize, Maximize, Close with Lucide Icons)
     local controlsHolder = Instance.new("Frame")
     controlsHolder.Size = UDim2.new(0, 110, 1, 0)
     controlsHolder.Position = UDim2.new(1, -120, 0, 0)
@@ -228,21 +268,31 @@ function AWDY:CreateWindow(config)
     controlsLayout.Padding = UDim.new(0, 8)
     controlsLayout.Parent = controlsHolder
 
-    -- Minimize Button
-    local minBtn = Instance.new("TextButton")
-    minBtn.Size = UDim2.new(0, 28, 0, 28)
-    minBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    minBtn.BackgroundTransparency = 0.9
-    minBtn.Text = "-"
-    minBtn.TextColor3 = self.ActiveTheme.TextColor
-    minBtn.Font = Enum.Font.GothamBold
-    minBtn.TextSize = 16
-    minBtn.Parent = controlsHolder
+    -- Helper to make Icon Buttons
+    local function MakeIconButton(iconName, bgCol, bgTrans)
+        local btn = Instance.new("ImageButton")
+        btn.Size = UDim2.new(0, 28, 0, 28)
+        btn.BackgroundColor3 = bgCol or Color3.fromRGB(255, 255, 255)
+        btn.BackgroundTransparency = bgTrans or 0.9
+        btn.Image = AWDY:GetIconId(iconName) or ""
+        btn.ImageColor3 = AWDY.ActiveTheme.TextColor
+        btn.ScaleType = Enum.ScaleType.Fit
+        btn.Parent = controlsHolder
 
-    local minCorner = Instance.new("UICorner")
-    minCorner.CornerRadius = UDim.new(0, 8)
-    minCorner.Parent = minBtn
+        local bCorner = Instance.new("UICorner")
+        bCorner.CornerRadius = UDim.new(0, 8)
+        bCorner.Parent = btn
 
+        local bStroke = Instance.new("UIStroke")
+        bStroke.Color = AWDY.ActiveTheme.StrokeColor
+        bStroke.Transparency = 0.88
+        bStroke.Parent = btn
+
+        return btn
+    end
+
+    -- Lucide Minimize
+    local minBtn = MakeIconButton("minus")
     local isMinimized = false
     minBtn.MouseButton1Click:Connect(function()
         isMinimized = not isMinimized
@@ -253,43 +303,19 @@ function AWDY:CreateWindow(config)
         end
     end)
 
-    -- Maximize Button
-    local maxBtn = Instance.new("TextButton")
-    maxBtn.Size = UDim2.new(0, 28, 0, 28)
-    maxBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    maxBtn.BackgroundTransparency = 0.9
-    maxBtn.Text = "⛶"
-    maxBtn.TextColor3 = self.ActiveTheme.TextColor
-    maxBtn.Font = Enum.Font.GothamBold
-    maxBtn.TextSize = 13
-    maxBtn.Parent = controlsHolder
+    -- Lucide Maximize
+    local maxBtn = MakeIconButton("maximize-2")
 
-    local maxCorner = Instance.new("UICorner")
-    maxCorner.CornerRadius = UDim.new(0, 8)
-    maxCorner.Parent = maxBtn
-
-    -- Close Button (Red Accent)
-    local closeBtn = Instance.new("TextButton")
-    closeBtn.Size = UDim2.new(0, 28, 0, 28)
-    closeBtn.BackgroundColor3 = self.ActiveTheme.RedAccent
-    closeBtn.BackgroundTransparency = 0.1
-    closeBtn.Text = "✕"
-    closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    closeBtn.Font = Enum.Font.GothamBold
-    closeBtn.TextSize = 14
-    closeBtn.Parent = controlsHolder
-
-    local closeCorner = Instance.new("UICorner")
-    closeCorner.CornerRadius = UDim.new(0, 8)
-    closeCorner.Parent = closeBtn
-
+    -- Lucide Close (Red Accent)
+    local closeBtn = MakeIconButton("x", self.ActiveTheme.RedAccent, 0.1)
+    closeBtn.ImageColor3 = Color3.fromRGB(255, 255, 255)
     closeBtn.MouseButton1Click:Connect(function()
         Tween(mainFrame, {0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.In}, {Size = UDim2.new(0, 0, 0, 0), BackgroundTransparency = 1})
         task.wait(0.25)
         screenGui:Destroy()
     end)
 
-    -- Left Sidebar Container
+    -- Left Sidebar
     local sideBar = Instance.new("Frame")
     sideBar.Name = "SideBar"
     sideBar.Size = UDim2.new(0, 230, 1, -58)
@@ -297,11 +323,10 @@ function AWDY:CreateWindow(config)
     sideBar.BackgroundTransparency = 1
     sideBar.Parent = mainFrame
 
-    -- Banner Image (Optional/Customizable)
+    -- Banner Image Frame
     local bannerFrame = Instance.new("ImageLabel")
     bannerFrame.Name = "Banner"
     bannerFrame.Size = UDim2.new(1, 0, 0, 85)
-    bannerFrame.Position = UDim2.new(0, 0, 0, 0)
     bannerFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     bannerFrame.BackgroundTransparency = 0.5
     bannerFrame.Image = defaultBanner
@@ -312,7 +337,7 @@ function AWDY:CreateWindow(config)
     bannerCorner.CornerRadius = UDim.new(0, 12)
     bannerCorner.Parent = bannerFrame
 
-    -- Search Bar Container
+    -- Search Bar with Lucide Search Icon
     local searchContainer = Instance.new("Frame")
     searchContainer.Name = "SearchContainer"
     searchContainer.Size = UDim2.new(1, 0, 0, 36)
@@ -330,17 +355,17 @@ function AWDY:CreateWindow(config)
     searchStroke.Transparency = 0.88
     searchStroke.Parent = searchContainer
 
-    local searchIcon = Instance.new("TextLabel")
-    searchIcon.Size = UDim2.new(0, 30, 1, 0)
+    local searchIcon = Instance.new("ImageLabel")
+    searchIcon.Size = UDim2.new(0, 18, 0, 18)
+    searchIcon.Position = UDim2.new(0, 10, 0.5, -9)
     searchIcon.BackgroundTransparency = 1
-    searchIcon.Text = "🔍"
-    searchIcon.TextSize = 13
-    searchIcon.TextColor3 = self.ActiveTheme.TextSubColor
+    searchIcon.Image = AWDY:GetIconId("search")
+    searchIcon.ImageColor3 = self.ActiveTheme.TextSubColor
     searchIcon.Parent = searchContainer
 
     local searchInput = Instance.new("TextBox")
     searchInput.Size = UDim2.new(1, -38, 1, 0)
-    searchInput.Position = UDim2.new(0, 32, 0, 0)
+    searchInput.Position = UDim2.new(0, 36, 0, 0)
     searchInput.BackgroundTransparency = 1
     searchInput.Font = Enum.Font.Gotham
     searchInput.PlaceholderText = "search for func"
@@ -384,7 +409,6 @@ function AWDY:CreateWindow(config)
     pwStroke.Transparency = 0.85
     pwStroke.Parent = playerWidget
 
-    -- Fetch Player Headshot Thumbnail
     local avatarImg = Instance.new("ImageLabel")
     avatarImg.Size = UDim2.new(0, 42, 0, 42)
     avatarImg.Position = UDim2.new(0, 10, 0.5, -21)
@@ -403,7 +427,6 @@ function AWDY:CreateWindow(config)
         end
     end)
 
-    -- Online Dot Status
     local onlineDot = Instance.new("Frame")
     onlineDot.Size = UDim2.new(0, 11, 0, 11)
     onlineDot.Position = UDim2.new(1, -12, 1, -12)
@@ -430,13 +453,13 @@ function AWDY:CreateWindow(config)
     roleLabel.Position = UDim2.new(0, 60, 0, 28)
     roleLabel.BackgroundTransparency = 1
     roleLabel.Font = Enum.Font.Gotham
-    roleLabel.Text = "User Status"
+    roleLabel.Text = "Role status"
     roleLabel.TextColor3 = self.ActiveTheme.TextSubColor
     roleLabel.TextSize = 11
     roleLabel.TextXAlignment = Enum.TextXAlignment.Left
     roleLabel.Parent = playerWidget
 
-    -- Main Content Pages Holder
+    -- Pages Container
     local pagesHolder = Instance.new("Frame")
     pagesHolder.Name = "PagesHolder"
     pagesHolder.Size = UDim2.new(1, -260, 1, -58)
@@ -444,7 +467,6 @@ function AWDY:CreateWindow(config)
     pagesHolder.BackgroundTransparency = 1
     pagesHolder.Parent = mainFrame
 
-    -- Window Object
     local Window = {
         ScreenGui = screenGui,
         MainFrame = mainFrame,
@@ -455,7 +477,7 @@ function AWDY:CreateWindow(config)
         SearchInput = searchInput
     }
 
-    -- Search Live Filter (Bonus Feature)
+    -- Live Search Filter
     searchInput.Changed:Connect(function()
         local query = string.lower(searchInput.Text)
         for _, tabObj in ipairs(Window.Tabs) do
@@ -471,14 +493,13 @@ function AWDY:CreateWindow(config)
         end
     end)
 
-    -- Tab Creation Function
+    -- Add Tab Function (Supports Lucide Icon Names)
     function Window:AddTab(tabConfig)
         tabConfig = tabConfig or {}
         local tabName = tabConfig.Name or "Tab"
         local tabBadge = tabConfig.Badge or nil
-        local tabIcon = tabConfig.Icon or "📊"
+        local iconId = AWDY:GetIconId(tabConfig.Icon) or AWDY:GetIconId("main")
 
-        -- Tab Button in Sidebar
         local tabBtn = Instance.new("TextButton")
         tabBtn.Name = "TabButton_" .. tabName
         tabBtn.Size = UDim2.new(1, 0, 0, 44)
@@ -496,7 +517,7 @@ function AWDY:CreateWindow(config)
         tabStroke.Transparency = 0.9
         tabStroke.Parent = tabBtn
 
-        -- Active Red Left Indicator Bar
+        -- Glowing Red Left Bar for Active Tab
         local activeBar = Instance.new("Frame")
         activeBar.Size = UDim2.new(0, 4, 0, 24)
         activeBar.Position = UDim2.new(0, 0, 0.5, -12)
@@ -508,14 +529,14 @@ function AWDY:CreateWindow(config)
         abCorner.CornerRadius = UDim.new(0, 2)
         abCorner.Parent = activeBar
 
-        local iconLabel = Instance.new("TextLabel")
-        iconLabel.Size = UDim2.new(0, 32, 1, 0)
-        iconLabel.Position = UDim2.new(0, 12, 0, 0)
-        iconLabel.BackgroundTransparency = 1
-        iconLabel.Text = tabIcon
-        iconLabel.TextSize = 14
-        iconLabel.TextColor3 = AWDY.ActiveTheme.TextColor
-        iconLabel.Parent = tabBtn
+        -- Lucide Icon Image
+        local tabIconImg = Instance.new("ImageLabel")
+        tabIconImg.Size = UDim2.new(0, 18, 0, 18)
+        tabIconImg.Position = UDim2.new(0, 14, 0.5, -9)
+        tabIconImg.BackgroundTransparency = 1
+        tabIconImg.Image = iconId
+        tabIconImg.ImageColor3 = AWDY.ActiveTheme.TextColor
+        tabIconImg.Parent = tabBtn
 
         local textLabel = Instance.new("TextLabel")
         textLabel.Size = UDim2.new(1, -80, 1, 0)
@@ -550,7 +571,6 @@ function AWDY:CreateWindow(config)
             badgeText.Parent = badgeFrame
         end
 
-        -- Page Frame in Main Container
         local pageFrame = Instance.new("ScrollingFrame")
         pageFrame.Name = "Page_" .. tabName
         pageFrame.Size = UDim2.new(1, 0, 1, 0)
@@ -567,12 +587,12 @@ function AWDY:CreateWindow(config)
 
         -- Page Header (Title + Subtitle)
         local pageHeader = Instance.new("Frame")
-        pageHeader.Size = UDim2.new(1, -10, 0, 40)
+        pageHeader.Size = UDim2.new(1, -10, 0, 44)
         pageHeader.BackgroundTransparency = 1
         pageHeader.Parent = pageFrame
 
         local pageTitle = Instance.new("TextLabel")
-        pageTitle.Size = UDim2.new(1, 0, 0, 22)
+        pageTitle.Size = UDim2.new(1, 0, 0, 24)
         pageTitle.BackgroundTransparency = 1
         pageTitle.Font = Enum.Font.GothamBold
         pageTitle.Text = tabName
@@ -583,10 +603,10 @@ function AWDY:CreateWindow(config)
 
         local pageSub = Instance.new("TextLabel")
         pageSub.Size = UDim2.new(1, 0, 0, 16)
-        pageSub.Position = UDim2.new(0, 0, 0, 22)
+        pageSub.Position = UDim2.new(0, 0, 0, 24)
         pageSub.BackgroundTransparency = 1
         pageSub.Font = Enum.Font.Gotham
-        pageSub.Text = tabConfig.Subtitle or (tabName .. " functions")
+        pageSub.Text = tabConfig.Subtitle or (tabName .. " func")
         pageSub.TextColor3 = AWDY.ActiveTheme.TextSubColor
         pageSub.TextSize = 12
         pageSub.TextXAlignment = Enum.TextXAlignment.Left
@@ -699,7 +719,6 @@ function AWDY:CreateWindow(config)
                 label.TextXAlignment = Enum.TextXAlignment.Left
                 label.Parent = row
 
-                -- Switch Track Pill
                 local switch = Instance.new("TextButton")
                 switch.Size = UDim2.new(0, 42, 0, 22)
                 switch.Position = UDim2.new(1, -54, 0.5, -11)
@@ -796,7 +815,7 @@ function AWDY:CreateWindow(config)
                 table.insert(TabObject.Items, {Name = name, Instance = row})
             end
 
-            -- Dropdown Component
+            -- Dropdown Component with Lucide Chevron
             function Section:AddDropdown(props)
                 props = props or {}
                 local name = props.Name or "Dropdown"
@@ -837,14 +856,27 @@ function AWDY:CreateWindow(config)
                 dropBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
                 dropBtn.BackgroundTransparency = 0.82
                 dropBtn.Font = Enum.Font.GothamBold
-                dropBtn.Text = default .. "  ∨"
+                dropBtn.Text = default
                 dropBtn.TextColor3 = AWDY.ActiveTheme.TextColor
                 dropBtn.TextSize = 12
+                dropBtn.TextXAlignment = Enum.TextXAlignment.Left
                 dropBtn.Parent = row
 
                 local dbCorner = Instance.new("UICorner")
                 dbCorner.CornerRadius = UDim.new(0, 8)
                 dbCorner.Parent = dropBtn
+
+                local dbPadding = Instance.new("UIPadding")
+                dbPadding.PaddingLeft = UDim.new(0, 10)
+                dbPadding.Parent = dropBtn
+
+                local dropIcon = Instance.new("ImageLabel")
+                dropIcon.Size = UDim2.new(0, 14, 0, 14)
+                dropIcon.Position = UDim2.new(1, -22, 0.5, -7)
+                dropIcon.BackgroundTransparency = 1
+                dropIcon.Image = AWDY:GetIconId("chevron-down")
+                dropIcon.ImageColor3 = AWDY.ActiveTheme.TextColor
+                dropIcon.Parent = dropBtn
 
                 local optHolder = Instance.new("Frame")
                 optHolder.Size = UDim2.new(1, -28, 0, #options * 32)
@@ -876,7 +908,7 @@ function AWDY:CreateWindow(config)
 
                     oBtn.MouseButton1Click:Connect(function()
                         selectedOpt = opt
-                        dropBtn.Text = selectedOpt .. "  ∨"
+                        dropBtn.Text = selectedOpt
                         isOpen = false
                         Tween(row, {0.2}, {Size = UDim2.new(1, 0, 0, 42)})
                         pcall(callback, selectedOpt)
@@ -895,7 +927,7 @@ function AWDY:CreateWindow(config)
                 table.insert(TabObject.Items, {Name = name, Instance = row})
             end
 
-            -- Slider Component
+            -- Slider Component with Red Progress Track
             function Section:AddSlider(props)
                 props = props or {}
                 local name = props.Name or "Slider"
@@ -940,7 +972,6 @@ function AWDY:CreateWindow(config)
                 valLabel.TextSize = 12
                 valLabel.Parent = row
 
-                -- Slider Track Bar
                 local track = Instance.new("Frame")
                 track.Size = UDim2.new(0, 150, 0, 6)
                 track.Position = UDim2.new(1, -160, 0.5, -3)
@@ -1072,7 +1103,7 @@ function AWDY:CreateWindow(config)
                 table.insert(TabObject.Items, {Name = name, Instance = row})
             end
 
-            -- Input Textbox Component
+            -- Input Component
             function Section:AddInput(props)
                 props = props or {}
                 local name = props.Name or "Input"
@@ -1135,52 +1166,442 @@ function AWDY:CreateWindow(config)
         return TabObject
     end
 
-    -- Create Default Dashboard Tab (Bonus Special Page)
-    function Window:CreateDefaultDashboard()
+    -- ====================================================================
+    -- EXACT DASHBOARD MATCHING awdy_ui/dashboard (WIP).png
+    -- ====================================================================
+    function Window:CreateDashboard(config)
+        config = config or {}
         local dashTab = self:AddTab({
             Name = "Dashboard",
-            Icon = "📊",
+            Icon = "dashboard",
             Badge = 3,
-            Subtitle = "Dashboard of whatever I want to show"
+            Subtitle = "Dashboard of what ever i want to show"
         })
 
-        local section = dashTab:AddSection("Current Experience")
+        local pageFrame = dashTab.Page
 
-        -- Live Experience Information
-        section:AddButton({
-            Name = "Place ID: " .. tostring(game.PlaceId),
-            Text = "Copy ID",
-            Callback = function()
-                setclipboard(tostring(game.PlaceId))
-                AWDY:Notify("Copied", "Place ID copied to clipboard!", 2)
+        -- 1. "Current experience" Card
+        local expCard = Instance.new("Frame")
+        expCard.Name = "CurrentExperienceCard"
+        expCard.Size = UDim2.new(1, -12, 0, 195)
+        expCard.BackgroundColor3 = AWDY.ActiveTheme.CardBackground
+        expCard.BackgroundTransparency = AWDY.ActiveTheme.CardTransparency
+        expCard.Parent = pageFrame
+
+        local ecCorner = Instance.new("UICorner")
+        ecCorner.CornerRadius = UDim.new(0, 14)
+        ecCorner.Parent = expCard
+
+        local ecStroke = Instance.new("UIStroke")
+        ecStroke.Color = AWDY.ActiveTheme.StrokeColor
+        ecStroke.Transparency = 0.88
+        ecStroke.Parent = expCard
+
+        -- Card Header: Title & "Connected" Pill
+        local ceTitle = Instance.new("TextLabel")
+        ceTitle.Size = UDim2.new(0, 200, 0, 20)
+        ceTitle.Position = UDim2.new(0, 16, 0, 14)
+        ceTitle.BackgroundTransparency = 1
+        ceTitle.Font = Enum.Font.GothamBold
+        ceTitle.Text = "Current experience"
+        ceTitle.TextColor3 = AWDY.ActiveTheme.TextColor
+        ceTitle.TextSize = 14
+        ceTitle.TextXAlignment = Enum.TextXAlignment.Left
+        ceTitle.Parent = expCard
+
+        local ceSub = Instance.new("TextLabel")
+        ceSub.Size = UDim2.new(0, 200, 0, 16)
+        ceSub.Position = UDim2.new(0, 16, 0, 34)
+        ceSub.BackgroundTransparency = 1
+        ceSub.Font = Enum.Font.Gotham
+        ceSub.Text = "Live game connection"
+        ceSub.TextColor3 = AWDY.ActiveTheme.TextSubColor
+        ceSub.TextSize = 11
+        ceSub.TextXAlignment = Enum.TextXAlignment.Left
+        ceSub.Parent = expCard
+
+        -- Green Glowing "Connected" Capsule Pill
+        local connPill = Instance.new("Frame")
+        connPill.Size = UDim2.new(0, 105, 0, 26)
+        connPill.Position = UDim2.new(1, -120, 0, 16)
+        connPill.BackgroundColor3 = Color3.fromRGB(35, 75, 45)
+        connPill.BackgroundTransparency = 0.6
+        connPill.Parent = expCard
+
+        local cpCorner = Instance.new("UICorner")
+        cpCorner.CornerRadius = UDim.new(1, 0)
+        cpCorner.Parent = connPill
+
+        local cpStroke = Instance.new("UIStroke")
+        cpStroke.Color = AWDY.ActiveTheme.GreenAccent
+        cpStroke.Transparency = 0.5
+        cpStroke.Parent = connPill
+
+        local cpDot = Instance.new("Frame")
+        cpDot.Size = UDim2.new(0, 8, 0, 8)
+        cpDot.Position = UDim2.new(0, 10, 0.5, -4)
+        cpDot.BackgroundColor3 = AWDY.ActiveTheme.GreenAccent
+        cpDot.Parent = connPill
+
+        local cpdCorner = Instance.new("UICorner")
+        cpdCorner.CornerRadius = UDim.new(1, 0)
+        cpdCorner.Parent = cpDot
+
+        local cpText = Instance.new("TextLabel")
+        cpText.Size = UDim2.new(1, -26, 1, 0)
+        cpText.Position = UDim2.new(0, 24, 0, 0)
+        cpText.BackgroundTransparency = 1
+        cpText.Font = Enum.Font.GothamBold
+        cpText.Text = "Connected"
+        cpText.TextColor3 = AWDY.ActiveTheme.GreenAccent
+        cpText.TextSize = 11
+        cpText.TextXAlignment = Enum.TextXAlignment.Left
+        cpText.Parent = connPill
+
+        -- Divider 1
+        local div1 = Instance.new("Frame")
+        div1.Size = UDim2.new(1, 0, 0, 1)
+        div1.Position = UDim2.new(0, 0, 0, 58)
+        div1.BackgroundColor3 = AWDY.ActiveTheme.StrokeColor
+        div1.BackgroundTransparency = 0.9
+        div1.BorderSizePixel = 0
+        div1.Parent = expCard
+
+        -- Middle Row: Game Icon, GameName, Rejoin, Server Hop
+        local gameThumb = Instance.new("ImageLabel")
+        gameThumb.Size = UDim2.new(0, 50, 0, 50)
+        gameThumb.Position = UDim2.new(0, 16, 0, 70)
+        gameThumb.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+        gameThumb.BackgroundTransparency = 0.3
+        gameThumb.ScaleType = Enum.ScaleType.Crop
+        gameThumb.Image = "rbxthumb://type=GameIcon&id=" .. game.PlaceId .. "&w=150&h=150"
+        gameThumb.Parent = expCard
+
+        local gtCorner = Instance.new("UICorner")
+        gtCorner.CornerRadius = UDim.new(0, 10)
+        gtCorner.Parent = gameThumb
+
+        local gNameLabel = Instance.new("TextLabel")
+        gNameLabel.Size = UDim2.new(0, 220, 0, 22)
+        gNameLabel.Position = UDim2.new(0, 76, 0, 72)
+        gNameLabel.BackgroundTransparency = 1
+        gNameLabel.Font = Enum.Font.GothamBold
+        gNameLabel.Text = "GameName"
+        gNameLabel.TextColor3 = AWDY.ActiveTheme.TextColor
+        gNameLabel.TextSize = 15
+        gNameLabel.TextXAlignment = Enum.TextXAlignment.Left
+        gNameLabel.Parent = expCard
+
+        local gByLabel = Instance.new("TextLabel")
+        gByLabel.Size = UDim2.new(0, 220, 0, 18)
+        gByLabel.Position = UDim2.new(0, 76, 0, 96)
+        gByLabel.BackgroundTransparency = 1
+        gByLabel.Font = Enum.Font.Gotham
+        gByLabel.Text = "By ..."
+        gByLabel.TextColor3 = AWDY.ActiveTheme.TextSubColor
+        gByLabel.TextSize = 12
+        gByLabel.TextXAlignment = Enum.TextXAlignment.Left
+        gByLabel.Parent = expCard
+
+        -- Fetch Real Game Info
+        task.spawn(function()
+            local success, info = pcall(function()
+                return MarketplaceService:GetProductInfo(game.PlaceId)
+            end)
+            if success and info then
+                gNameLabel.Text = info.Name
+                gByLabel.Text = "By " .. (info.Creator and info.Creator.Name or "Roblox")
             end
-        })
+        end)
 
-        section:AddButton({
-            Name = "Rejoin Game",
-            Text = "Rejoin",
-            Callback = function()
-                AWDY:Notify("Teleporting", "Rejoining game server...", 3)
-                TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
-            end
-        })
+        -- Buttons: Rejoin & Server Hop
+        local rejoinBtn = Instance.new("TextButton")
+        rejoinBtn.Size = UDim2.new(0, 75, 0, 32)
+        rejoinBtn.Position = UDim2.new(1, -195, 0, 79)
+        rejoinBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+        rejoinBtn.BackgroundTransparency = 0.85
+        rejoinBtn.Font = Enum.Font.GothamBold
+        rejoinBtn.Text = "Rejoin"
+        rejoinBtn.TextColor3 = AWDY.ActiveTheme.TextColor
+        rejoinBtn.TextSize = 12
+        rejoinBtn.Parent = expCard
 
-        section:AddButton({
-            Name = "Server Hop (Next Server)",
-            Text = "Hop Server",
-            Callback = function()
-                AWDY:Notify("Server Hop", "Searching for new server...", 3)
-                pcall(function()
-                    local servers = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/0?sortOrder=Asc&limit=100")).data
-                    for _, s in ipairs(servers) do
-                        if s.playing ~= s.maxPlayers and s.id ~= game.JobId then
-                            TeleportService:TeleportToPlaceInstance(game.PlaceId, s.id)
-                            break
-                        end
+        local rjCorner = Instance.new("UICorner")
+        rjCorner.CornerRadius = UDim.new(0, 8)
+        rjCorner.Parent = rejoinBtn
+
+        local rjStroke = Instance.new("UIStroke")
+        rjStroke.Color = AWDY.ActiveTheme.StrokeColor
+        rjStroke.Transparency = 0.88
+        rjStroke.Parent = rejoinBtn
+
+        rejoinBtn.MouseButton1Click:Connect(function()
+            AWDY:Notify("Rejoining", "Teleporting back to server...", 3)
+            TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
+        end)
+
+        local hopBtn = Instance.new("TextButton")
+        hopBtn.Size = UDim2.new(0, 95, 0, 32)
+        hopBtn.Position = UDim2.new(1, -112, 0, 79)
+        hopBtn.BackgroundColor3 = AWDY.ActiveTheme.RedAccent
+        hopBtn.BackgroundTransparency = 0.15
+        hopBtn.Font = Enum.Font.GothamBold
+        hopBtn.Text = "Server Hop"
+        hopBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        hopBtn.TextSize = 12
+        hopBtn.Parent = expCard
+
+        local hpCorner = Instance.new("UICorner")
+        hpCorner.CornerRadius = UDim.new(0, 8)
+        hpCorner.Parent = hopBtn
+
+        hopBtn.MouseButton1Click:Connect(function()
+            AWDY:Notify("Server Hop", "Finding public server...", 3)
+            pcall(function()
+                local raw = game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/0?sortOrder=Asc&limit=100")
+                local servers = HttpService:JSONDecode(raw).data
+                for _, s in ipairs(servers) do
+                    if s.playing ~= s.maxPlayers and s.id ~= game.JobId then
+                        TeleportService:TeleportToPlaceInstance(game.PlaceId, s.id)
+                        break
                     end
-                end)
+                end
+            end)
+        end)
+
+        -- Divider 2
+        local div2 = Instance.new("Frame")
+        div2.Size = UDim2.new(1, 0, 0, 1)
+        div2.Position = UDim2.new(0, 0, 0, 132)
+        div2.BackgroundColor3 = AWDY.ActiveTheme.StrokeColor
+        div2.BackgroundTransparency = 0.9
+        div2.BorderSizePixel = 0
+        div2.Parent = expCard
+
+        -- Bottom Stats Row (4 Columns separated by vertical lines)
+        local statsHolder = Instance.new("Frame")
+        statsHolder.Size = UDim2.new(1, 0, 0, 62)
+        statsHolder.Position = UDim2.new(0, 0, 0, 133)
+        statsHolder.BackgroundTransparency = 1
+        statsHolder.Parent = expCard
+
+        local function CreateStatCol(posX, width, titleText, valText)
+            local col = Instance.new("Frame")
+            col.Size = UDim2.new(width, -1, 1, 0)
+            col.Position = UDim2.new(posX, 0, 0, 0)
+            col.BackgroundTransparency = 1
+            col.Parent = statsHolder
+
+            local sTitle = Instance.new("TextLabel")
+            sTitle.Size = UDim2.new(1, -20, 0, 16)
+            sTitle.Position = UDim2.new(0, 14, 0, 10)
+            sTitle.BackgroundTransparency = 1
+            sTitle.Font = Enum.Font.Gotham
+            sTitle.Text = titleText
+            sTitle.TextColor3 = AWDY.ActiveTheme.TextSubColor
+            sTitle.TextSize = 10
+            sTitle.TextXAlignment = Enum.TextXAlignment.Left
+            sTitle.Parent = col
+
+            local sVal = Instance.new("TextLabel")
+            sVal.Size = UDim2.new(1, -20, 0, 20)
+            sVal.Position = UDim2.new(0, 14, 0, 28)
+            sVal.BackgroundTransparency = 1
+            sVal.Font = Enum.Font.GothamBold
+            sVal.Text = valText
+            sVal.TextColor3 = AWDY.ActiveTheme.TextColor
+            sVal.TextSize = 13
+            sVal.TextXAlignment = Enum.TextXAlignment.Left
+            sVal.Parent = col
+
+            -- Vertical Line
+            local vLine = Instance.new("Frame")
+            vLine.Size = UDim2.new(0, 1, 1, 0)
+            vLine.Position = UDim2.new(1, 0, 0, 0)
+            vLine.BackgroundColor3 = AWDY.ActiveTheme.StrokeColor
+            vLine.BackgroundTransparency = 0.9
+            vLine.BorderSizePixel = 0
+            vLine.Parent = col
+
+            return sVal, col
+        end
+
+        -- 1: Place ID
+        CreateStatCol(0, 0.25, "Place ID", tostring(game.PlaceId))
+
+        -- 2: Region
+        CreateStatCol(0.25, 0.25, "Region", "US East")
+
+        -- 3: Server age (Live Time Counter)
+        local serverAgeLabel = CreateStatCol(0.5, 0.25, "Server age", "00:00:00")
+        task.spawn(function()
+            while task.wait(1) do
+                local sTime = math.floor(workspace.DistributedGameTime)
+                local h = math.floor(sTime / 3600)
+                local m = math.floor((sTime % 3600) / 60)
+                local s = sTime % 60
+                serverAgeLabel.Text = string.format("%02d:%02d:%02d", h, m, s)
             end
-        })
+        end)
+
+        -- 4: Job ID with Copy Button (Lucide Copy Icon)
+        local rawJob = game.JobId
+        local truncJob = (#rawJob > 12) and (string.sub(rawJob, 1, 8) .. "..." .. string.sub(rawJob, -3)) or (rawJob ~= "" and rawJob or "Solo Server")
+        local _, col4 = CreateStatCol(0.75, 0.25, "Job ID", truncJob)
+
+        local copyJobBtn = Instance.new("ImageButton")
+        copyJobBtn.Size = UDim2.new(0, 28, 0, 28)
+        copyJobBtn.Position = UDim2.new(1, -38, 0.5, -14)
+        copyJobBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+        copyJobBtn.BackgroundTransparency = 0.85
+        copyJobBtn.Image = AWDY:GetIconId("copy")
+        copyJobBtn.ImageColor3 = AWDY.ActiveTheme.TextColor
+        copyJobBtn.Parent = col4
+
+        local cjbCorner = Instance.new("UICorner")
+        cjbCorner.CornerRadius = UDim.new(0, 6)
+        cjbCorner.Parent = copyJobBtn
+
+        copyJobBtn.MouseButton1Click:Connect(function()
+            if setclipboard then
+                setclipboard(game.JobId)
+            end
+            AWDY:Notify("Copied", "Job ID copied to clipboard!", 2)
+        end)
+
+        -- 2. "Quick Controls" Card
+        local qcCard = Instance.new("Frame")
+        qcCard.Name = "QuickControlsCard"
+        qcCard.Size = UDim2.new(1, -12, 0, 160)
+        qcCard.BackgroundColor3 = AWDY.ActiveTheme.CardBackground
+        qcCard.BackgroundTransparency = AWDY.ActiveTheme.CardTransparency
+        qcCard.Parent = pageFrame
+
+        local qcCorner = Instance.new("UICorner")
+        qcCorner.CornerRadius = UDim.new(0, 14)
+        qcCorner.Parent = qcCard
+
+        local qcStroke = Instance.new("UIStroke")
+        qcStroke.Color = AWDY.ActiveTheme.StrokeColor
+        qcStroke.Transparency = 0.88
+        qcStroke.Parent = qcCard
+
+        local qcTitle = Instance.new("TextLabel")
+        qcTitle.Size = UDim2.new(0, 200, 0, 20)
+        qcTitle.Position = UDim2.new(0, 16, 0, 14)
+        qcTitle.BackgroundTransparency = 1
+        qcTitle.Font = Enum.Font.GothamBold
+        qcTitle.Text = "Quick Controls"
+        qcTitle.TextColor3 = AWDY.ActiveTheme.TextColor
+        qcTitle.TextSize = 14
+        qcTitle.TextXAlignment = Enum.TextXAlignment.Left
+        qcTitle.Parent = qcCard
+
+        local qcSub = Instance.new("TextLabel")
+        qcSub.Size = UDim2.new(0, 200, 0, 16)
+        qcSub.Position = UDim2.new(0, 16, 0, 34)
+        qcSub.BackgroundTransparency = 1
+        qcSub.Font = Enum.Font.Gotham
+        qcSub.Text = "Frequently used session modules"
+        qcSub.TextColor3 = AWDY.ActiveTheme.TextSubColor
+        qcSub.TextSize = 11
+        qcSub.TextXAlignment = Enum.TextXAlignment.Left
+        qcSub.Parent = qcCard
+
+        -- 2x2 Grid Container with Divider Lines
+        local gridHolder = Instance.new("Frame")
+        gridHolder.Size = UDim2.new(1, 0, 0, 96)
+        gridHolder.Position = UDim2.new(0, 0, 0, 58)
+        gridHolder.BackgroundTransparency = 1
+        gridHolder.Parent = qcCard
+
+        -- Grid Divider Lines
+        local hLine = Instance.new("Frame")
+        hLine.Size = UDim2.new(1, 0, 0, 1)
+        hLine.Position = UDim2.new(0, 0, 0.5, 0)
+        hLine.BackgroundColor3 = AWDY.ActiveTheme.StrokeColor
+        hLine.BackgroundTransparency = 0.9
+        hLine.BorderSizePixel = 0
+        hLine.Parent = gridHolder
+
+        local vLineGrid = Instance.new("Frame")
+        vLineGrid.Size = UDim2.new(0, 1, 1, 0)
+        vLineGrid.Position = UDim2.new(0.5, 0, 0, 0)
+        vLineGrid.BackgroundColor3 = AWDY.ActiveTheme.StrokeColor
+        vLineGrid.BackgroundTransparency = 0.9
+        vLineGrid.BorderSizePixel = 0
+        vLineGrid.Parent = gridHolder
+
+        local function AddQuickItem(xScale, yScale, name, iconName, defaultState, callback)
+            local itemBtn = Instance.new("TextButton")
+            itemBtn.Size = UDim2.new(0.5, -2, 0.5, -2)
+            itemBtn.Position = UDim2.new(xScale, 1, yScale, 1)
+            itemBtn.BackgroundTransparency = 1
+            itemBtn.Text = ""
+            itemBtn.Parent = gridHolder
+
+            local iconImg = Instance.new("ImageLabel")
+            iconImg.Size = UDim2.new(0, 18, 0, 18)
+            iconImg.Position = UDim2.new(0, 16, 0.5, -9)
+            iconImg.BackgroundTransparency = 1
+            iconImg.Image = AWDY:GetIconId(iconName) or AWDY:GetIconId("zap")
+            iconImg.ImageColor3 = defaultState and AWDY.ActiveTheme.RedAccent or AWDY.ActiveTheme.TextSubColor
+            iconImg.Parent = itemBtn
+
+            local label = Instance.new("TextLabel")
+            label.Size = UDim2.new(1, -70, 1, 0)
+            label.Position = UDim2.new(0, 42, 0, 0)
+            label.BackgroundTransparency = 1
+            label.Font = Enum.Font.GothamMedium
+            label.Text = name
+            label.TextColor3 = AWDY.ActiveTheme.TextColor
+            label.TextSize = 12
+            label.TextXAlignment = Enum.TextXAlignment.Left
+            label.Parent = itemBtn
+
+            local stateText = Instance.new("TextLabel")
+            stateText.Size = UDim2.new(0, 40, 1, 0)
+            stateText.Position = UDim2.new(1, -50, 0, 0)
+            stateText.BackgroundTransparency = 1
+            stateText.Font = Enum.Font.GothamBold
+            stateText.Text = defaultState and "ON" or "OFF"
+            stateText.TextColor3 = defaultState and AWDY.ActiveTheme.RedAccent or AWDY.ActiveTheme.TextSubColor
+            stateText.TextSize = 11
+            stateText.Parent = itemBtn
+
+            local current = defaultState
+            itemBtn.MouseButton1Click:Connect(function()
+                current = not current
+                stateText.Text = current and "ON" or "OFF"
+                stateText.TextColor3 = current and AWDY.ActiveTheme.RedAccent or AWDY.ActiveTheme.TextSubColor
+                iconImg.ImageColor3 = current and AWDY.ActiveTheme.RedAccent or AWDY.ActiveTheme.TextSubColor
+                pcall(callback, current)
+            end)
+        end
+
+        AddQuickItem(0, 0, "Anti-AFK Protection", "shield", true, function(val)
+            AWDY:Notify("Anti-AFK", "Anti-AFK is now: " .. (val and "ON" or "OFF"), 1.5)
+        end)
+
+        AddQuickItem(0.5, 0, "FPS Unlocker", "zap", true, function(val)
+            if setfpscap then setfpscap(val and 999 or 60) end
+            AWDY:Notify("FPS Cap", val and "Unlocked FPS" or "Capped to 60", 1.5)
+        end)
+
+        AddQuickItem(0, 0.5, "Fullbright", "eye", false, function(val)
+            if val then
+                game.Lighting.Brightness = 2
+                game.Lighting.ClockTime = 14
+                game.Lighting.FogEnd = 100000
+            end
+            AWDY:Notify("Fullbright", "Fullbright: " .. (val and "ON" or "OFF"), 1.5)
+        end)
+
+        AddQuickItem(0.5, 0.5, "Auto Reconnect", "rotate-cw", true, function(val)
+            AWDY:Notify("Auto Reconnect", "Auto Reconnect: " .. (val and "ON" or "OFF"), 1.5)
+        end)
+
+        return dashTab
     end
 
     return Window
