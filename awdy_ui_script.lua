@@ -12,6 +12,7 @@ local CoreGui = game:GetService("CoreGui")
 local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
 local MarketplaceService = game:GetService("MarketplaceService")
+local Lighting = game:GetService("Lighting")
 
 local LocalPlayer = Players.LocalPlayer
 
@@ -1825,6 +1826,8 @@ function AWDY:CreateWindow(config)
     local windowTitle = config.Title or "AWDY HUB"
     local windowVer = config.Version or self.Version
     local defaultBanner = config.Banner or "rbxassetid://12501062078"
+    local defaultBg = config.BackgroundImage or nil
+    local blurSize = config.BlurSize or 24
 
     -- ScreenGui Setup
     local screenGui = Instance.new("ScreenGui")
@@ -1832,6 +1835,16 @@ function AWDY:CreateWindow(config)
     screenGui.ResetOnSpawn = false
     screenGui.Parent = ParentGui
     self.ScreenGui = screenGui
+
+    -- Background Blur Effect in Lighting (Active when no background image is set)
+    local blurEffect = Lighting:FindFirstChild("AWDY_BlurEffect")
+    if not blurEffect then
+        blurEffect = Instance.new("BlurEffect")
+        blurEffect.Name = "AWDY_BlurEffect"
+        blurEffect.Size = blurSize
+        blurEffect.Enabled = false
+        blurEffect.Parent = Lighting
+    end
 
     -- Main Container (Translucent Glass Frame)
     local mainFrame = Instance.new("Frame")
@@ -1846,6 +1859,64 @@ function AWDY:CreateWindow(config)
     local mainCorner = Instance.new("UICorner")
     mainCorner.CornerRadius = UDim.new(0, 16)
     mainCorner.Parent = mainFrame
+
+    -- Custom Window Background Image (Optional Wallpaper)
+    local windowBgImg = Instance.new("ImageLabel")
+    windowBgImg.Name = "WindowBackgroundImage"
+    windowBgImg.Size = UDim2.new(1, 0, 1, 0)
+    windowBgImg.Position = UDim2.new(0, 0, 0, 0)
+    windowBgImg.BackgroundTransparency = 1
+    windowBgImg.ScaleType = Enum.ScaleType.Crop
+    windowBgImg.ZIndex = 1
+    windowBgImg.Parent = mainFrame
+
+    local wbCorner = Instance.new("UICorner")
+    wbCorner.CornerRadius = UDim.new(0, 16)
+    wbCorner.Parent = windowBgImg
+
+    -- Subtle dark overlay on background image for text readability
+    local bgDarkOverlay = Instance.new("Frame")
+    bgDarkOverlay.Name = "BackgroundDarkOverlay"
+    bgDarkOverlay.Size = UDim2.new(1, 0, 1, 0)
+    bgDarkOverlay.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+    bgDarkOverlay.BackgroundTransparency = 0.45
+    bgDarkOverlay.ZIndex = 1
+    bgDarkOverlay.Parent = windowBgImg
+
+    local bdoCorner = Instance.new("UICorner")
+    bdoCorner.CornerRadius = UDim.new(0, 16)
+    bdoCorner.Parent = bgDarkOverlay
+
+    local hasBgImage = false
+    local isMinimized = false
+
+    local function UpdateBackgroundMode(img, transparency)
+        if img and img ~= "" and img ~= false then
+            hasBgImage = true
+            windowBgImg.Image = AWDY:GetIconId(img) or img
+            windowBgImg.ImageTransparency = transparency or 0.15
+            windowBgImg.Visible = true
+            -- When custom image is set: turn off background blur
+            blurEffect.Enabled = false
+            mainFrame.BackgroundTransparency = 0.2
+        else
+            hasBgImage = false
+            windowBgImg.Image = ""
+            windowBgImg.Visible = false
+            -- When NO image is set: blur whatever is underneath the UI!
+            blurEffect.Enabled = mainFrame.Visible and (not isMinimized)
+            mainFrame.BackgroundTransparency = AWDY.ActiveTheme.MainTransparency
+        end
+    end
+
+    UpdateBackgroundMode(defaultBg, config.BackgroundTransparency)
+
+    -- Auto manage blur on visibility change
+    mainFrame:GetPropertyChangedSignal("Visible"):Connect(function()
+        if blurEffect then
+            blurEffect.Enabled = mainFrame.Visible and (not hasBgImage) and (not isMinimized)
+        end
+    end)
 
     local mainStroke = Instance.new("UIStroke")
     mainStroke.Color = self.ActiveTheme.StrokeColor
@@ -1919,13 +1990,14 @@ function AWDY:CreateWindow(config)
 
     -- Lucide Minimize
     local minBtn = MakeIconButton("minus")
-    local isMinimized = false
     minBtn.MouseButton1Click:Connect(function()
         isMinimized = not isMinimized
         if isMinimized then
             Tween(mainFrame, {0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out}, {Size = UDim2.new(0, 780, 0, 48)})
+            if blurEffect then blurEffect.Enabled = false end
         else
             Tween(mainFrame, {0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out}, {Size = UDim2.new(0, 780, 0, 520)})
+            if blurEffect and (not hasBgImage) then blurEffect.Enabled = true end
         end
     end)
 
@@ -1936,6 +2008,7 @@ function AWDY:CreateWindow(config)
     local closeBtn = MakeIconButton("x", self.ActiveTheme.RedAccent, 0.1)
     closeBtn.ImageColor3 = Color3.fromRGB(255, 255, 255)
     closeBtn.MouseButton1Click:Connect(function()
+        if blurEffect then blurEffect:Destroy() end
         Tween(mainFrame, {0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.In}, {Size = UDim2.new(0, 0, 0, 0), BackgroundTransparency = 1})
         task.wait(0.25)
         screenGui:Destroy()
@@ -2100,8 +2173,23 @@ function AWDY:CreateWindow(config)
         TabScroll = tabScroll,
         Tabs = {},
         CurrentTab = nil,
-        SearchInput = searchInput
+        SearchInput = searchInput,
+        BackgroundImage = windowBgImg,
+        BlurEffect = blurEffect
     }
+
+    function Window:SetBackgroundImage(image, transparency)
+        UpdateBackgroundMode(image, transparency)
+    end
+
+    function Window:SetBlur(enabled, size)
+        if size then blurEffect.Size = size end
+        if enabled ~= nil then
+            blurEffect.Enabled = enabled
+        else
+            blurEffect.Enabled = not hasBgImage
+        end
+    end
 
     -- Live Search Filter
     searchInput.Changed:Connect(function()
