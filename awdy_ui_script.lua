@@ -2118,7 +2118,7 @@ function AWDY:CreateWindow(config)
     end)
 
     -- Lucide Maximize
-    local maxBtn = MakeIconButton("maximize-2")
+    local maxBtn = MakeIconButton("square")
 
     -- Lucide Close (Red Accent)
     local closeBtn = MakeIconButton("x", self.ActiveTheme.RedAccent, 0.1)
