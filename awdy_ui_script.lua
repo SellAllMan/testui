@@ -2194,7 +2194,7 @@ function AWDY:CreateWindow(config)
     -- Sidebar Tab Navigation ScrollView
     local tabScroll = Instance.new("ScrollingFrame")
     tabScroll.Name = "TabScroll"
-    tabScroll.Size = UDim2.new(1, 0, 1, -210)
+    tabScroll.Size = UDim2.new(1, 0, 1, -230)
     tabScroll.Position = UDim2.new(0, 0, 0, 140)
     tabScroll.BackgroundTransparency = 1
     tabScroll.ScrollBarThickness = 2
